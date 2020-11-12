@@ -3,9 +3,12 @@ import json
 from collections import Counter
 import nltk
 from nltk.stem import PorterStemmer
-import xml.etree.ElementTree as ET
+from lxml.etree import parse
 
-english_data_file = "./data/ted_talks.csv"
+from hazm import *
+
+english_data_path = "C:\\Users\\Zeinab\\Desktop\\untitled1\\data\\ted_talks.csv"
+persian_data_path = "C:\\Users\\Zeinab\\Desktop\\untitled1\\data\\Persian.xml"
 
 
 def prepare_text(language, text):
@@ -30,6 +33,22 @@ def en_prepare_text(content):
     return s_tokens
 
 
+def fa_prepare_text(content):
+    # normalize
+    normalizer = Normalizer()
+    content = normalizer.normalize(content)
+
+    # tokenizing and removing punctuation marks
+    tokenizer = nltk.RegexpTokenizer(r"\w+")
+    tokens = tokenizer.tokenize(content)
+
+    # stemming
+    stemmer = Stemmer()
+    res = [stemmer.stem(x) for x in tokens]
+
+    return res
+
+
 def remove_sw_and_get_most_freq(tokens_list, title_dictionary, text_dictionary):
     c = Counter(tokens_list)
     most_frequent = c.most_common(55)
@@ -46,14 +65,10 @@ def remove_sw_and_get_most_freq(tokens_list, title_dictionary, text_dictionary):
     return title_dictionary, text_dictionary, most_frequent[40:]
 
 
-def get_english_documents_data():
+def read_eglish_docs(title, text, tokens):
     rows = []
-    text_dic = {}
-    title_dic = {}
-    all_tokens = []
-
     # reading csv file
-    with open(english_data_file, encoding="utf8") as csvfile:
+    with open(english_data_path, encoding="utf8") as csvfile:
         # creating a csv reader object
         csvreader = csv.reader(csvfile)
 
@@ -62,19 +77,40 @@ def get_english_documents_data():
             rows.append(row)
 
     for i in range(1, len(rows)):
-        text_dic[i] = en_prepare_text(rows[i][1])
-        title_dic[i] = en_prepare_text(rows[i][14])
-        all_tokens = all_tokens + text_dic[i] + title_dic[i]
+        text[i] = en_prepare_text(rows[i][1])
+        title[i] = en_prepare_text(rows[i][14])
+        tokens = tokens + text[i] + title[i]
+
+    return title, text, tokens
+
+
+def read_persian_docs(title, text, tokens):
+    tree = parse(persian_data_path)
+    ns = {"wiki": "http://www.mediawiki.org/xml/export-0.10/"}
+    titles = tree.xpath("//wiki:title//text()", namespaces=ns)
+    texts = tree.xpath("//wiki:text//text()", namespaces=ns)
+
+    for i in range(1, len(titles)):
+        text[i] = fa_prepare_text(texts[i])
+        title[i] = fa_prepare_text(titles[i])
+        tokens = tokens + text[i] + title[i]
+
+    return title, text, tokens
+
+
+def get_documents_data(language):
+    text_dic = {}
+    title_dic = {}
+    all_tokens = []
+
+    if language == "en":
+        title_dic, text_dic, all_tokens = read_eglish_docs(title_dic, text_dic, all_tokens)
+    else:
+        title_dic, text_dic, all_tokens = read_persian_docs(title_dic, text_dic, all_tokens)
 
     title_dic, text_dic, f = remove_sw_and_get_most_freq(all_tokens, title_dic, text_dic)
 
     return title_dic, text_dic, f
-
-
-def get_persian_documents_data():
-    # todo
-    print("Not implemented")
-    return [], [], 0
 
 
 def create_indexes(dic):
@@ -121,10 +157,10 @@ def main():
         elif order == "2":
             language = input("Pick the language:\n1)English\n2)Persian\n")
             if language == "1":
-                _, _, f = get_english_documents_data()
+                _, _, f = get_documents_data("en")
                 print("The 15 most frequent token in English documents:\n", f)
             elif language == "2":
-                _, _, f = get_persian_documents_data()
+                _, _, f = get_documents_data("fa")
                 print("The 15 most frequent token in Persian documents:\n", f)
 
                 # print("Top 3 frequent tokens of document ",i+1 , get_docs_most_freq_tokens(documents[i]))
