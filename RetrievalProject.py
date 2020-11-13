@@ -105,7 +105,7 @@ def read_persian_docs(title, text, tokens):
 
     for i in range(1, len(titles)):
         text[i] = prepare_text('fa',texts[i],i)
-        title[i] = prepare_text('fa',titles[i][1],i)
+        title[i] = prepare_text('fa',titles[i],i)
         tokens = tokens + text[i] + title[i]
 
     return title, text, tokens
