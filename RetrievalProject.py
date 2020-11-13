@@ -182,7 +182,7 @@ def create_indexes(dic, language):
     save_data(index,language,'bigram')
 
 
-def get_positional_posting_list(word,language,index_type):
+def get_posting_list(word, language, index_type):
     index = load_data(language,index_type)
     if word in index:
         return index[word]
@@ -347,13 +347,13 @@ def main():
             language = ''
             while language != 'en' and language != 'fa':
                 language = input("Which language ? 'fa' or 'en' ?")
-            print(get_positional_posting_list(input_str,language,"positional"))
+            print(get_posting_list(input_str, language, "positional"))
         elif order == "4":
             input_str = input("Give us the word\n")
             language = ''
             while language != 'en' and language != 'fa':
                 language = input("Which language ? 'fa' or 'en' ?")
-            index = get_positional_posting_list(input_str, language,"positional")
+            index = get_posting_list(input_str, language, "positional")
             for docId in index :
                 if 'text' in index[docId] :
                     print("doc num"+docId +" (text) --> "+ string_of_arr(index[docId]['text']))
@@ -364,7 +364,7 @@ def main():
             language = ''
             while language != 'en' and language != 'fa':
                 language = input("Which language ? 'fa' or 'en' ?")
-            print(string_of_arr([word for word in get_positional_posting_list(input_str,language,"bigram")]))
+            print(string_of_arr([word for word in get_posting_list(input_str, language, "bigram")]))
         elif order == "6":
             doc_id = input("Give us the doc Id\n")
             title = input("Give us the title\n")
