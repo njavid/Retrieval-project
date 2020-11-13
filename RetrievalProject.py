@@ -1,5 +1,6 @@
 import csv
 import json
+import copy
 from collections import Counter
 
 import nltk
@@ -9,13 +10,26 @@ from nltk.stem import PorterStemmer
 
 english_data_path = ".\\data\\ted_talks.csv"
 persian_data_path = ".\\data\\Persian.xml"
+en_all_docs = {}
+fa_all_docs = {}
 
-def prepare_text(language, text):
+
+def prepare_text(language, text, doc_id):
     tokens = []
+    doc_id = str(doc_id)
     if language == "en":
-        tokens = en_prepare_text(text)
+            tokens = en_prepare_text(text)
+            if doc_id in en_all_docs:
+                en_all_docs[str(doc_id)].extend(copy.deepcopy(tokens))
+            else:
+                en_all_docs[str(doc_id)] = copy.deepcopy(tokens)
     else:
-        print("Todo")
+            print("Todo")
+            if doc_id in fa_all_docs:
+                fa_all_docs[str(doc_id)].extend(copy.deepcopy(tokens))
+            else:
+                fa_all_docs[str(doc_id)] = copy.deepcopy(tokens)
+
 
     return tokens
 
@@ -76,8 +90,8 @@ def read_english_docs(title, text, tokens):
             rows.append(row)
 
     for i in range(1, len(rows)):
-        text[i] = en_prepare_text(rows[i][1])
-        title[i] = en_prepare_text(rows[i][14])
+        text[i] = prepare_text('en',rows[i][1],i)
+        title[i] = prepare_text('en',rows[i][14],i)
         tokens = tokens + text[i] + title[i]
 
     return title, text, tokens
@@ -90,8 +104,8 @@ def read_persian_docs(title, text, tokens):
     texts = tree.xpath("//wiki:text//text()", namespaces=ns)
 
     for i in range(1, len(titles)):
-        text[i] = fa_prepare_text(texts[i])
-        title[i] = fa_prepare_text(titles[i])
+        text[i] = prepare_text('fa',texts[i],i)
+        title[i] = prepare_text('fa',titles[i][1],i)
         tokens = tokens + text[i] + title[i]
 
     return title, text, tokens
@@ -114,7 +128,6 @@ def get_documents_data(language):
 
 def create_indexes(dic, language):
     title_dic, text_dic = dic[0], dic[1]
-    print(text_dic)
 
     #   positional index
     index = {}
@@ -190,6 +203,7 @@ def load_data(language,index_type):
     index = json.loads(index_text)
     # if index_type == 'positional' :
         # todo encode index
+    # print(index)
     return index
 
 
@@ -200,22 +214,58 @@ def save_data(data,language,index_type):
     file2 = open(language + "-"+index_type+"-index.txt", "w+")
     file2.write(index_txt)
     file2.close()
-    print(index_txt)
 
 
-def delete_from_index(docId,language):
+def delete_from_index(doc_id, language):
     bigram_index = load_data(language,'bigram')
     positional_index = load_data(language,'positional')
     # update positional:
-    #   todo
+    if language == 'en':
+        if doc_id in en_all_docs :
+            tokens = en_all_docs[doc_id]
+            en_all_docs.pop(doc_id)
+        else :
+            print('This doc id does not exit!')
+            return
+    else:
+        if doc_id in fa_all_docs :
+            tokens = fa_all_docs[doc_id]
+            fa_all_docs.pop(doc_id)
+        else :
+            print('This doc id does not exit!')
+            return
+    for token in tokens:
+        if token in positional_index:
+            if doc_id in positional_index[token]:
+                positional_index[token].pop(doc_id)
+            if doc_id in positional_index[token]:
+                positional_index[token].pop(doc_id)
+
+    # update bigram :
+    for token in tokens:
+        for i in range(len(token) - 1):
+            bi = token[i:i + 2]
+            if bi in bigram_index:
+                if token in bigram_index[bi] :
+                    bigram_index[bi][token] -= 1
+
+    save_data(positional_index, language, 'positional')
+    save_data(bigram_index, language, 'bigram')
 
 
-def add_doc_to_index(doc_id,text,title,language):
-    prepared_title = prepare_text(language,title)
-    prepared_text = prepare_text(language,text)
+def add_doc_to_index(doc_id,title,text,language):
+    if language == 'en' and doc_id in en_all_docs:
+        print("This doc id exists!")
+        return
+    if language == 'fa' and doc_id in fa_all_docs:
+        print("This doc id exists!")
+        return
+    prepared_title = prepare_text(language,title,doc_id)
+    prepared_text = prepare_text(language,text,doc_id)
     bigram_index = load_data(language,"bigram")
     positional_index = load_data(language,"positional")
 
+    # update positional :
     for position in range(0, len(prepared_text)):
         token = prepared_text[position]
         if token in positional_index:
@@ -236,13 +286,26 @@ def add_doc_to_index(doc_id,text,title,language):
                 if 'title' in positional_index[token][doc_id]:
                     positional_index[token][doc_id]['title'].append(position)
                 else:
-                    positional_index[token][doc_id]['title'] = position
+                    positional_index[token][doc_id]['title'] = [position]
             else:
                 positional_index[token][doc_id] = {'title': [position]}
         else:
             positional_index[token] = {doc_id: {'title': [position]}}
 
-#todo bi
+    # update bigram index :
+    prepared_text.extend(prepared_title)
+    for token in prepared_text:
+        for i in range(len(token) - 1):
+            bi = token[i:i + 2]
+            if bi in bigram_index:
+                if token in bigram_index[bi]:
+                    bigram_index[bi][token] += 1
+                else:
+                    bigram_index[bi][token] = 1
+            else:
+                bigram_index[bi] = {token: 1}
+
+
     save_data(positional_index,language,'positional')
     save_data(bigram_index,language,'bigram')
 
@@ -271,18 +334,25 @@ def main():
                 print("Your input tokens after preprocess:\n", prepare_text("fa", input_str))
 
         elif order == "2":
-            language = input("Which language ? 'fa' or 'en' ?")
+            language = ''
+            while language != 'en' and language != 'fa':
+                language = input("Which language ? 'fa' or 'en' ?")
+
             _,_, f = get_documents_data(language)
             print("The 15 most frequent token in "+language+" documents:\n", f)
 
             # print("Top 3 frequent tokens of document ",i+1 , get_docs_most_freq_tokens(documents[i]))
         elif order == "3":
             input_str = input("Give us the word\n")
-            language = input("Which language ? 'fa' or 'en' ?")
+            language = ''
+            while language != 'en' and language != 'fa':
+                language = input("Which language ? 'fa' or 'en' ?")
             print(get_positional_posting_list(input_str,language,"positional"))
         elif order == "4":
             input_str = input("Give us the word\n")
-            language = input("Which language ? 'fa' or 'en' ?")
+            language = ''
+            while language != 'en' and language != 'fa':
+                language = input("Which language ? 'fa' or 'en' ?")
             index = get_positional_posting_list(input_str, language,"positional")
             for docId in index :
                 if 'text' in index[docId] :
@@ -291,18 +361,24 @@ def main():
                     print("doc num"+docId +" (title) --> "+ string_of_arr(index[docId]['title']))
         elif order == "5":
             input_str = input("Give us the bigram\n")
-            language = input("Which language ? 'fa' or 'en' ?")
+            language = ''
+            while language != 'en' and language != 'fa':
+                language = input("Which language ? 'fa' or 'en' ?")
             print(string_of_arr([word for word in get_positional_posting_list(input_str,language,"bigram")]))
         elif order == "6":
             doc_id = input("Give us the doc Id\n")
             title = input("Give us the title\n")
             text = input("Give us the text\n")
-            language = input("Which language ? 'fa' or 'en' ?")
+            language = ''
+            while language != 'en' and language != 'fa':
+                language = input("Which language ? 'fa' or 'en' ?")
             add_doc_to_index(doc_id,title,text,language)
             print('done')
         elif order == "7":
             doc_id = input("Give us the doc_id\n")
-            language = input("Which language ? 'fa' or 'en' ?")
+            language = ''
+            while language != 'en' and language != 'fa':
+                language = input("Which language ? 'fa' or 'en' ?")
             delete_from_index(doc_id,language)
             print('done')
         elif order == "8":
