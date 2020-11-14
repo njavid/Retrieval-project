@@ -1,14 +1,17 @@
 import json
-
+import Compressor
 
 class Indexer:
 
     def __init__(self, name):
         self.index = {}
         self.name = name
+        self.compressor = Compressor.Compressor()
 
     def save(self):
         file = open(self.name + ".json", "w+", encoding='utf-8')
+        if 'positional' in self.name:
+            self.compressor.compress(self.index)
         index_str = json.dumps(self.index, indent=4)
         file.write(index_str)
         file.close()
@@ -19,6 +22,8 @@ class Indexer:
             index_text = file.read()
             file.close()
             self.index = json.loads(index_text)
+            if 'positional' in self.name:
+                self.compressor.decompress(self.index)
         except FileNotFoundError:
             raise Exception('Indexes have not been created yet!')
 
@@ -30,6 +35,7 @@ class PositionalIndexer(Indexer):
         self.index_with_zone(doc_id, 'body', body)
 
     def index_with_zone(self, doc_id, zone, content):
+        doc_id = str(doc_id)
         for position in range(len(content)):
             token = content[position]
             if token not in self.index:
