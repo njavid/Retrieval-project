@@ -1,3 +1,4 @@
+from SpellCorrection import SpellCorrection
 from Documents import EnglishDocuments, PersianDocuments
 from Indexers import PositionalIndexer, BigramIndexer
 
@@ -11,6 +12,7 @@ class IR:
             self.documents = PersianDocuments("./data/Persian.xml")
         self.positional_indexer = PositionalIndexer(lang + '-positional-index')
         self.bigram_indexer = BigramIndexer(lang + '-bigram-index')
+        self.spell_correction = SpellCorrection(self.positional_indexer, self.bigram_indexer)
 
     def create_indexes(self):
         self.documents.init()
@@ -45,6 +47,10 @@ class IR:
         self.bigram_indexer.index_document(doc_id, tokenized_title + tokenized_body)
         self.positional_indexer.save()
         self.bigram_indexer.save()
+
+    def query(self, q):
+        tokenized_q = self.documents.extract_tokens(q)
+        return [self.spell_correction.correct_spelling(t) for t in tokenized_q]
 
     def save(self):
         self.positional_indexer.save()

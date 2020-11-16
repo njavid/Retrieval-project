@@ -1,5 +1,7 @@
 import json
+
 import Compressor
+
 
 class Indexer:
 

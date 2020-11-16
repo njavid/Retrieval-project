@@ -11,15 +11,15 @@ class Compressor:
                              range(0, len(doc_ids))}
                 index[token]['title'] = new_index
 
-            if 'text' in index[token]:
-                doc_ids = [int(doc_id) for doc_id in index[token]['text']]
+            if 'body' in index[token]:
+                doc_ids = [int(doc_id) for doc_id in index[token]['body']]
                 doc_ids.sort()
                 gaps = [doc_ids[0]]
                 for i in range(1, len(doc_ids)):
                     gaps.append(doc_ids[i] - doc_ids[i - 1])
-                new_index = {self.gamma_code(gaps[i], 'c'): index[token]['text'][str(doc_ids[i])] for i in
+                new_index = {self.gamma_code(gaps[i], 'c'): index[token]['body'][str(doc_ids[i])] for i in
                              range(0, len(doc_ids))}
-                index[token]['text'] = new_index
+                index[token]['body'] = new_index
 
     def decompress(self, index):
         for token in index:
@@ -33,17 +33,18 @@ class Compressor:
                              range(0, len(doc_ids))}
                 index[token]['title'] = new_index
 
-            if 'text' in index[token]:
-                doc_ids = [int(doc_id) for doc_id in index[token]['text']]
+            if 'body' in index[token]:
+                doc_ids = [int(doc_id) for doc_id in index[token]['body']]
                 doc_ids.sort()
                 gaps = [doc_ids[0]]
                 for i in range(1, len(doc_ids)):
                     gaps.append(doc_ids[i] + doc_ids[i - 1])
-                new_index = {self.gamma_code(gaps[i], 'd'): index[token]['text'][str(doc_ids[i])] for i in
+                new_index = {self.gamma_code(gaps[i], 'd'): index[token]['body'][str(doc_ids[i])] for i in
                              range(0, len(doc_ids))}
-                index[token]['text'] = new_index
+                index[token]['body'] = new_index
 
-    def gamma_code(self, num, type):
+    @staticmethod
+    def gamma_code(num, type):
         if type == 'c':
             binary = bin(num)[2:]
             return '1' * (len(binary) - 1) + '0' + binary[1:]
@@ -53,7 +54,8 @@ class Compressor:
             return int('1' + num_str[index + 1:], 2)
         return None
 
-    def variable_byte_code(self, num, type):
+    @staticmethod
+    def variable_byte_code(num, type):
         if type == 'c':
             binary = bin(num)[2:]
             s = len(binary)

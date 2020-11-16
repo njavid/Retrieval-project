@@ -36,9 +36,10 @@ if __name__ == '__main__':
             order = get_order(
                 "What do you want to see?\n1)Your input tokens after preprocess\n"
                 "2)See the 15 most frequent token in documents\n"
-                "3)show posting list of a word\n4)show position of a word in per doc\n"
-                "5)show all word containing a bigram\n"
-                "6)add a new doc to index\n7)delete a doc from index\n8)quit\n", range(1, 9))
+                "3)Show posting list of a word\n4)Show position of a word in per doc\n"
+                "5)Show all word containing a bigram\n"
+                "6)Add a new doc to index\n7)delete a doc from index\n"
+                "8)Correct your query spelling\n9)Quit\n", range(1, 10))
 
             if order == "1":
                 input_str = input("Give us the text\n")
@@ -74,6 +75,9 @@ if __name__ == '__main__':
                 ir.delete_document(doc_id)
                 print('done')
             elif order == "8":
+                query = input("Give us the query\n")
+                print(*ir.query(query))
+            elif order == "9":
                 print("Hope to see you again:)")
                 break
         except Exception as e:
