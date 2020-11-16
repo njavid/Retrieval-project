@@ -23,6 +23,11 @@ class SpellCorrection:
                 dp[i][j] = min(dp[i][j], dp[i][j - 1] + 1)
         return dp[len(a)][len(b)]
 
+    def jaccard_distance(self, a, b):
+        s_a = set([a[i:i + 2] for i in range(len(a) - 1)])
+        s_b = set([b[i:i + 2] for i in range(len(b) - 1)])
+        return len(s_a.intersection(s_b))/len(s_a.union(s_a))
+
     def check_spell(self, word):
         return word in self.main_index.index
 
